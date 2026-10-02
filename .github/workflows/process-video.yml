@@ -1,0 +1,68 @@
+name: Process video with logo
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: "Public URL of the source video"
+        required: true
+        type: string
+      logo_url:
+        description: "Public URL of the logo PNG"
+        required: true
+        type: string
+      job_id:
+        description: "Unique job identifier"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download source video
+        env:
+          VIDEO_URL: '${{ inputs.video_url }}'
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 --connect-timeout 30 --max-time 300 "$VIDEO_URL" -o input.mp4
+          test -s input.mp4
+          file input.mp4
+
+      - name: Download logo
+        env:
+          LOGO_URL: '${{ inputs.logo_url }}'
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 --connect-timeout 30 --max-time 120 "$LOGO_URL" -o logo.png
+          test -s logo.png
+          file logo.png
+
+      - name: Process video with FFmpeg
+        run: |
+          set -euo pipefail
+          ffmpeg -hide_banner -y -i input.mp4 -i logo.png -filter_complex "[1:v]scale=-2:ih*0.30[logo];[0:v][logo]overlay=x=(main_w-overlay_w)/2:y=main_h-overlay_h-main_h*0.02:format=auto[v]" -map "[v]" -map 0:a? -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart output.mp4
+          test -s output.mp4
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 output.mp4
+
+      - name: Prepare result
+        env:
+          JOB_ID: '${{ inputs.job_id }}'
+        run: |
+          set -euo pipefail
+          mkdir -p result
+          cp output.mp4 "result/video_$JOB_ID.mp4"
+          printf '%s
+' "$JOB_ID" > result/job_id.txt
+
+      - name: Upload processed video
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-result-${{ inputs.job_id }}
+          path: result/
+          retention-days: 1
+          if-no-files-found: error
