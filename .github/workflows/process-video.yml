@@ -76,7 +76,7 @@ jobs:
           printf '%s\n' "$JOB_ID" > result/job_id.txt
 
       - name: Upload processed video
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: video-result-${{ inputs.job_id }}
           path: result/
