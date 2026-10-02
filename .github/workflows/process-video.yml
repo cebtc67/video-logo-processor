@@ -53,7 +53,7 @@ jobs:
           ffmpeg -hide_banner -y \
             -i input.mp4 \
             -i logo.png \
-            -filter_complex "[1:v]scale=-2:ih*0.30[logo];[0:v][logo]overlay=x=(main_w-overlay_w)/2:y=main_h-overlay_h-main_h*0.02:format=auto[v]" \
+            -filter_complex "[1:v]scale=-2:ih*0.50[logo];[0:v][logo]overlay=x=(main_w-overlay_w)/2:y=main_h-overlay_h-main_h*0.05:format=auto[v]" \
             -map "[v]" \
             -map 0:a? \
             -c:v libx264 \
